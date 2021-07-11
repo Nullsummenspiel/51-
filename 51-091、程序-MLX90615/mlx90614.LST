@@ -1,0 +1,225 @@
+C51 COMPILER V9.00   MLX90614                                                              01/07/2021 14:50:42 PAGE 1   
+
+
+C51 COMPILER V9.00, COMPILATION OF MODULE MLX90614
+OBJECT MODULE PLACED IN mlx90614.OBJ
+COMPILER INVOKED BY: E:\Keil_vC51\C51\BIN\C51.EXE mlx90614.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "mlx90614.h"
+   2          
+   3          
+   4          #define Nack_counter 10
+   5          
+   6          //************数据定义****************
+   7          
+   8          unsigned char bit_out=1;
+   9          unsigned char bit_in=1;
+  10          
+  11          unsigned char DataH,DataL,Pecreg;
+  12          
+  13          void start_bit(void)
+  14          {
+  15   1              SDA=1;
+  16   1              _nop_();_nop_();
+  17   1              SCL=1;
+  18   1              _nop_();_nop_();
+  19   1              SDA=0;
+  20   1              _nop_();_nop_();
+  21   1              SCL=0;
+  22   1              _nop_();
+  23   1      }
+  24          
+  25          void stop_bit(void)
+  26          {
+  27   1              SCL=0;
+  28   1              _nop_();_nop_();
+  29   1              SDA=0;
+  30   1              _nop_();_nop_();
+  31   1              SCL=1;
+  32   1              _nop_();_nop_();
+  33   1              SDA=1;
+  34   1              _nop_();_nop_();
+  35   1              SCL=0;
+  36   1              _nop_();
+  37   1      }
+  38          
+  39          
+  40          //---------发送一个字节---------
+  41          void tx_byte(unsigned char dat_byte)
+  42          {
+  43   1              char i,n,dat;
+  44   1              n=Nack_counter;
+  45   1      
+  46   1              dat=dat_byte;
+  47   1              for(i=0;i<8;i++)
+  48   1              {
+  49   2                      if(dat&0x80)
+  50   2                      bit_out=1;
+  51   2                      else
+  52   2                      bit_out=0;
+  53   2                      send_bit();
+  54   2                      dat=dat<<1;
+  55   2              }
+C51 COMPILER V9.00   MLX90614                                                              01/07/2021 14:50:42 PAGE 2   
+
+  56   1              receive_bit();
+  57   1              if(bit_in==1)
+  58   1              {
+  59   2                      stop_bit();
+  60   2                      if(n!=0)
+  61   2                      {n--;}
+  62   2                      else
+  63   2                              return;
+  64   2              }
+  65   1              else
+  66   1                      return;
+  67   1              start_bit();
+  68   1              tx_byte(dat_byte);              //函数自身回调
+  69   1      }
+  70          
+  71          ////---------发送一个字节---------
+  72          //void tx_byte(unsigned char dat_byte)
+  73          //{
+  74          //      char i,n,dat;
+  75          //      n=Nack_counter;
+  76          //      TX_again:
+  77          //      dat=dat_byte;
+  78          //      for(i=0;i<8;i++)
+  79          //      {
+  80          //              if(dat&0x80)
+  81          //              bit_out=1;
+  82          //              else
+  83          //              bit_out=0;
+  84          //              send_bit();
+  85          //              dat=dat<<1;
+  86          //      }
+  87          //      receive_bit();
+  88          //      if(bit_in==1)
+  89          //      {
+  90          //              stop_bit();
+  91          //              if(n!=0)
+  92          //              {n--;goto Repeat;}
+  93          //              else
+  94          //              goto exit;
+  95          //      }
+  96          //      else
+  97          //      goto exit;
+  98          //      Repeat:
+  99          //      start_bit();
+ 100          //      goto TX_again;
+ 101          //      exit: ;
+ 102          //}
+ 103          //-----------发送一个位---------
+ 104          void send_bit(void)
+ 105          {
+ 106   1              if(bit_out==0)
+ 107   1                      SDA=0;
+ 108   1              else
+ 109   1                      SDA=1;
+ 110   1              _nop_();_nop_();
+ 111   1              SCL=1;
+ 112   1              _nop_();_nop_();
+ 113   1              
+ 114   1              SCL=0;
+ 115   1              _nop_();_nop_();
+ 116   1      }
+ 117          //----------接收一个字节--------
+C51 COMPILER V9.00   MLX90614                                                              01/07/2021 14:50:42 PAGE 3   
+
+ 118          unsigned char rx_byte(void)
+ 119          {
+ 120   1              unsigned char i,dat;
+ 121   1              dat=0;
+ 122   1              for(i=0;i<8;i++)
+ 123   1              {
+ 124   2                      dat=dat<<1;
+ 125   2                      receive_bit();
+ 126   2                      if(bit_in==1)
+ 127   2                      dat=dat+1;
+ 128   2              }
+ 129   1              send_bit();
+ 130   1              return dat;
+ 131   1      }
+ 132          //----------接收一个位----------
+ 133          void receive_bit(void)
+ 134          {
+ 135   1              SDA=1;bit_in=1;_nop_();
+ 136   1              SCL=1;
+ 137   1              _nop_();_nop_();
+ 138   1              
+ 139   1              bit_in=SDA;
+ 140   1              _nop_();_nop_();
+ 141   1              SCL=0;
+ 142   1              _nop_();_nop_();
+ 143   1              
+ 144   1      }
+ 145          
+ 146          //------------------------------
+ 147          unsigned int ReadObjectTemp(void)
+ 148          {
+ 149   1              start_bit();
+ 150   1              tx_byte(0x00); //Send SlaveAddress
+ 151   1              tx_byte(0x07); //Send Command
+ 152   1              start_bit();
+ 153   1              tx_byte(0x01);
+ 154   1              bit_out=0;
+ 155   1              DataL=rx_byte();
+ 156   1              bit_out=0;
+ 157   1              DataH=rx_byte();
+ 158   1              bit_out=1;
+ 159   1              Pecreg=rx_byte();
+ 160   1              stop_bit();
+ 161   1              return(DataH*256+DataL);
+ 162   1      }
+ 163          
+ 164          unsigned int ReadEnvironTemp(void)
+ 165          {
+ 166   1              start_bit();
+ 167   1              tx_byte(0x00); //Send SlaveAddress
+ 168   1              tx_byte(0x06); //Send Command
+ 169   1              start_bit();
+ 170   1              tx_byte(0x01);
+ 171   1              bit_out=0;
+ 172   1              DataL=rx_byte();
+ 173   1              bit_out=0;
+ 174   1              DataH=rx_byte();
+ 175   1              bit_out=1;
+ 176   1              Pecreg=rx_byte();
+ 177   1              stop_bit();
+ 178   1              return(DataH*256+DataL);
+ 179   1      }
+C51 COMPILER V9.00   MLX90614                                                              01/07/2021 14:50:42 PAGE 4   
+
+ 180          
+ 181          
+ 182          //---------------------------------------
+ 183          //Name: CALTEMP           
+ 184          //Temperature data is T=(Data)*0.02-273.15
+ 185          
+ 186          //Tem=ReadObjectTemp();
+ 187          //objTemp=(float)(Tem)*0.02-273.15;
+ 188          //sprintf(tab_up,"O:%5.2f %05d ",objTemp,Tem);//打印温度值
+ 189          //LCD_Write_String(0,0,tab_up);//显示第一行
+ 190          //
+ 191          //Tem=ReadEnvironTemp();
+ 192          //envTemp=(float)(Tem)*0.02-273.15;
+ 193          //sprintf(tab_dw,"E:%5.2f %05d ",envTemp,Tem);//打印温度值
+ 194          //LCD_Write_String(0,1,tab_dw);//显示第一行
+ 195          //
+ 196          //DelayMs(200);
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    303    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      5       6
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

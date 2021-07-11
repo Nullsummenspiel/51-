@@ -1,0 +1,7 @@
+"STARTUP.obj",
+"delay.obj",
+"main.obj",
+"1602.obj",
+"mlx90614.obj" 
+TO "89c51" 
+RAMSIZE(256) 
